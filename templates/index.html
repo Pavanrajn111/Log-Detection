@@ -1,0 +1,2934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sysmon Sentinel • Local Endpoint Monitoring</title>
+  <style>
+    /* -------------------------------------------------------------------------
+       CSS Reset & Variables: Dark Security Operations Theme
+       ------------------------------------------------------------------------- */
+    :root {
+      --bg-base: #0a0e17;
+      --bg-panel: rgba(16, 23, 38, 0.82);
+      --bg-panel-hover: rgba(22, 33, 54, 0.92);
+      --bg-card: rgba(19, 29, 49, 0.65);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(6, 182, 212, 0.5);
+      
+      --accent-cyan: #06b6d4;
+      --accent-cyan-glow: rgba(6, 182, 212, 0.25);
+      --accent-blue: #3b82f6;
+      --accent-sky: #0284c7;
+      
+      --status-emerald: #10b981;
+      --status-emerald-glow: rgba(16, 185, 129, 0.25);
+      --status-amber: #f59e0b;
+      --status-amber-glow: rgba(245, 158, 11, 0.25);
+      --status-rose: #ef4444;
+      --status-rose-glow: rgba(239, 68, 68, 0.25);
+      --status-purple: #a855f7;
+      --status-slate: #64748b;
+
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --transition-fast: 0.15s ease;
+      --transition-smooth: 0.25s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(6, 182, 212, 0.04) 0%, transparent 45%),
+        radial-gradient(circle at 85% 90%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* -------------------------------------------------------------------------
+       Top Navigation & App Header
+       ------------------------------------------------------------------------- */
+    .app-header {
+      background: var(--bg-panel);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 0.85rem 1.5rem;
+    }
+
+    .header-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+    }
+
+    .brand-icon-wrapper {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.1));
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px var(--accent-cyan-glow);
+    }
+
+    .brand-icon-wrapper svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--accent-cyan);
+    }
+
+    .radar-pulse {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--accent-cyan);
+      opacity: 0.7;
+      animation: pulse-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 0; }
+      100% { transform: scale(1.2); opacity: 0; }
+    }
+
+    .brand-titles {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand-name span.sentinel {
+      color: var(--accent-cyan);
+    }
+
+    .local-pill {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      padding: 0.15rem 0.45rem;
+      border-radius: 9999px;
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: var(--accent-cyan);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .status-cluster {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 9999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      transition: var(--transition-fast);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-badge.connected .status-dot {
+      background-color: var(--status-emerald);
+      box-shadow: 0 0 8px var(--status-emerald-glow);
+    }
+
+    .status-badge.warning .status-dot {
+      background-color: var(--status-amber);
+      box-shadow: 0 0 8px var(--status-amber-glow);
+    }
+
+    .status-badge.error .status-dot {
+      background-color: var(--status-rose);
+      box-shadow: 0 0 8px var(--status-rose-glow);
+    }
+
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .source-badge.live {
+      background: rgba(16, 185, 129, 0.14);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .source-badge.demo {
+      background: rgba(245, 158, 11, 0.14);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .controls-cluster {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .refresh-info {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all var(--transition-fast);
+      user-select: none;
+    }
+
+    .btn svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0369a1, #0284c7);
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-outline-amber {
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-outline-amber:hover {
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .toggle-group {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      gap: 0.45rem;
+    }
+
+    .toggle-group label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .toggle-group input[type="checkbox"] {
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+
+    .select-sm {
+      background: rgba(0, 0, 0, 0.4);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.2rem 0.4rem;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      outline: none;
+    }
+
+    .select-sm:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    /* -------------------------------------------------------------------------
+       Main Dashboard Layout
+       ------------------------------------------------------------------------- */
+    .dashboard-body {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    /* -------------------------------------------------------------------------
+       Troubleshooting & Access Denied Notification Banner
+       ------------------------------------------------------------------------- */
+    .alert-banner {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-left: 4px solid var(--status-amber);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .alert-banner.hidden {
+      display: none;
+    }
+
+    .alert-icon {
+      color: var(--status-amber);
+      flex-shrink: 0;
+      margin-top: 0.15rem;
+    }
+
+    .alert-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .alert-content {
+      flex: 1;
+    }
+
+    .alert-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #fbbf24;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .alert-desc {
+      font-size: 0.84rem;
+      color: #e2e8f0;
+      margin-bottom: 0.5rem;
+    }
+
+    .troubleshoot-steps {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .troubleshoot-steps code {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      color: #38bdf8;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .alert-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    /* -------------------------------------------------------------------------
+       Summary Cards (Live Metrics)
+       ------------------------------------------------------------------------- */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .metric-card {
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .card-total::before { background: linear-gradient(90deg, #06b6d4, #3b82f6); }
+    .card-process::before { background: linear-gradient(90deg, #10b981, #059669); }
+    .card-network::before { background: linear-gradient(90deg, #0284c7, #2563eb); }
+    .card-file::before { background: linear-gradient(90deg, #14b8a6, #0d9488); }
+    .card-other::before { background: linear-gradient(90deg, #a855f7, #7c3aed); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+
+    .card-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .card-process .card-icon { color: #34d399; background: rgba(16, 185, 129, 0.1); }
+    .card-network .card-icon { color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+    .card-file .card-icon { color: #2dd4bf; background: rgba(45, 212, 191, 0.1); }
+    .card-other .card-icon { color: #c084fc; background: rgba(192, 132, 252, 0.1); }
+    .card-total .card-icon { color: #22d3ee; background: rgba(34, 211, 238, 0.1); }
+
+    .card-value {
+      font-size: 2.1rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      letter-spacing: -0.03em;
+      color: #fff;
+      line-height: 1.1;
+      margin-bottom: 0.35rem;
+    }
+
+    .card-subtext {
+      font-size: 0.74rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* -------------------------------------------------------------------------
+       Activity Visualization & Distribution Panels
+       ------------------------------------------------------------------------- */
+    .vis-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 1024px) {
+      .vis-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 0.75rem;
+    }
+
+    .panel-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .panel-title svg {
+      width: 18px;
+      height: 18px;
+      color: var(--accent-cyan);
+    }
+
+    .panel-subtitle {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+    }
+
+    /* Pure SVG Interactive Timeline */
+    .timeline-container {
+      width: 100%;
+      height: 180px;
+      position: relative;
+    }
+
+    .timeline-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .chart-bar {
+      fill: url(#bar-gradient);
+      cursor: pointer;
+      transition: fill var(--transition-fast), filter var(--transition-fast);
+    }
+
+    .chart-bar:hover {
+      fill: #38bdf8;
+      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
+    }
+
+    .chart-grid-line {
+      stroke: rgba(255, 255, 255, 0.05);
+      stroke-dasharray: 3 3;
+    }
+
+    .chart-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      fill: var(--text-dim);
+    }
+
+    /* Distribution Progress Bar & Legend */
+    .distribution-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .progress-stacked {
+      display: flex;
+      height: 12px;
+      border-radius: 9999px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .progress-segment {
+      height: 100%;
+      transition: width var(--transition-smooth);
+    }
+
+    .dist-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+
+    .dist-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-muted);
+    }
+
+    .dist-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .dist-count {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* -------------------------------------------------------------------------
+       Event Feed Section & Toolbar
+       ------------------------------------------------------------------------- */
+    .feed-panel {
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 0.85rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .search-box-wrapper {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+      max-width: 440px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      pointer-events: none;
+      width: 16px;
+      height: 16px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(10, 15, 25, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.45rem 2rem 0.45rem 2.25rem;
+      color: #fff;
+      font-size: 0.82rem;
+      outline: none;
+      transition: border-color var(--transition-fast);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan-glow);
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 0.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: none;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .search-clear:hover {
+      color: #fff;
+    }
+
+    .filters-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .pill-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .pill-filter {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.74rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      user-select: none;
+    }
+
+    .pill-filter:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .pill-filter.active {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: rgba(6, 182, 212, 0.5);
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .feed-stats-summary {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* -------------------------------------------------------------------------
+       Event Table & Rows
+       ------------------------------------------------------------------------- */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      background: rgba(10, 14, 23, 0.5);
+    }
+
+    .event-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.8rem;
+    }
+
+    .event-table th {
+      background: rgba(16, 23, 38, 0.95);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    .event-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    .event-row {
+      cursor: pointer;
+      transition: background-color var(--transition-fast);
+    }
+
+    .event-row:hover {
+      background-color: var(--bg-panel-hover);
+    }
+
+    .event-time {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      white-space: nowrap;
+    }
+
+    .event-time-relative {
+      color: var(--text-dim);
+      font-size: 0.68rem;
+      display: block;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-process { background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+    .badge-network { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
+    .badge-file { background: rgba(45, 212, 191, 0.14); color: #2dd4bf; border: 1px solid rgba(45, 212, 191, 0.35); }
+    .badge-registry { background: rgba(192, 132, 252, 0.12); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.25); }
+    .badge-dns { background: rgba(6, 182, 212, 0.12); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.25); }
+    .badge-system { background: rgba(244, 63, 94, 0.12); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.25); }
+    .badge-critical { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .badge-driver { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+    .badge-image { background: rgba(129, 140, 248, 0.12); color: #a5b4fc; border: 1px solid rgba(129, 140, 248, 0.25); }
+    .badge-other { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.25); }
+
+    .sev-pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sev-info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .sev-low { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+    .sev-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .sev-high { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+    .sev-critical { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+    /* Process & Target Column */
+    .process-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      max-width: 290px;
+    }
+
+    .process-name-line {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .proc-name {
+      font-weight: 700;
+      color: #fff;
+      font-size: 0.84rem;
+    }
+
+    .pid-tag {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      color: #94a3b8;
+    }
+
+    .process-subtext {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-cell {
+      font-size: 0.76rem;
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+
+    /* Key Details Column */
+    .details-cell {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: #e2e8f0;
+      max-width: 380px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--accent-cyan);
+      padding: 0.25rem 0.55rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .action-btn:hover {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+
+    /* Empty State */
+    .empty-state {
+      padding: 3rem 1.5rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .empty-icon {
+      width: 48px;
+      height: 48px;
+      color: var(--text-dim);
+    }
+
+    .empty-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .empty-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      max-width: 420px;
+    }
+
+    /* Pagination */
+    .pagination-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding-top: 0.5rem;
+    }
+
+    .page-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-page {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 0.3rem 0.65rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .btn-page:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.09);
+      color: #fff;
+    }
+
+    .btn-page.active {
+      background: var(--accent-blue);
+      color: #fff;
+      border-color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    .btn-page:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* -------------------------------------------------------------------------
+       Event Details Modal / Inspector
+       ------------------------------------------------------------------------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-dialog {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 880px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(6, 182, 212, 0.1);
+      transform: scale(0.96);
+      transition: transform var(--transition-smooth);
+    }
+
+    .modal-backdrop.open .modal-dialog {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .modal-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .modal-close {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* Key Details Box in Inspector */
+    .action-summary-box {
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+      font-size: 0.84rem;
+      color: #e2e8f0;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .info-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+    }
+
+    .info-card-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 0.25rem;
+    }
+
+    .info-card-val {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #fff;
+      font-family: var(--font-mono);
+      word-break: break-all;
+    }
+
+    .section-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .code-box {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #38bdf8;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      z-index: 2;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+
+    /* Process Hierarchy Tree */
+    .hierarchy-container {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .hierarchy-node {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+    }
+
+    .node-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .node-row {
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: #cbd5e1;
+      margin-bottom: 0.25rem;
+      word-break: break-all;
+    }
+
+    .node-row strong {
+      color: #94a3b8;
+    }
+
+    .hierarchy-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-cyan);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* Hashes Cards Grid */
+    .hashes-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .hash-card {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      position: relative;
+    }
+
+    .hash-badge {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      flex-shrink: 0;
+    }
+
+    .hash-value {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: #e2e8f0;
+      word-break: break-all;
+      flex: 1;
+    }
+
+    .hash-copy-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.68rem;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .hash-copy-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .fields-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .fields-table tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .fields-table tr:last-child {
+      border-bottom: none;
+    }
+
+    .fields-table td {
+      padding: 0.5rem 0.85rem;
+      vertical-align: top;
+    }
+
+    .fields-table td.field-name {
+      color: var(--text-muted);
+      font-weight: 600;
+      width: 32%;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .fields-table td.field-val {
+      color: #e2e8f0;
+      font-family: var(--font-mono);
+      word-break: break-all;
+    }
+
+    .raw-xml-box {
+      max-height: 240px;
+      overflow-y: auto;
+      font-size: 0.72rem;
+      color: #a5b4fc;
+      background: #030712;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.85rem;
+      border-radius: var(--radius-md);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .no-data-notice {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-style: italic;
+      padding: 0.5rem 0;
+    }
+
+    /* -------------------------------------------------------------------------
+       Demo Guide Modal
+       ------------------------------------------------------------------------- */
+    .guide-step {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-text {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+    }
+
+    .step-title {
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.2rem;
+    }
+
+    /* Footer */
+    .app-footer {
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-panel);
+      padding: 1rem 1.5rem;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Sentinel Bar -->
+  <header class="app-header">
+    <div class="header-container">
+      <!-- Brand & Status -->
+      <div class="brand-section">
+        <div class="brand-icon-wrapper" title="Sysmon Sentinel Sensor Active">
+          <div class="radar-pulse"></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <div class="brand-name">
+            Sysmon <span class="sentinel">Sentinel</span>
+            <span class="local-pill">127.0.0.1</span>
+          </div>
+          <div class="brand-sub">
+            Local Endpoint Monitoring &bull; Windows Sysmon Operational Stream
+          </div>
+        </div>
+      </div>
+
+      <!-- Telemetry Status Cluster -->
+      <div class="status-cluster">
+        <div id="connectionStatusBadge" class="status-badge connected">
+          <span class="status-dot"></span>
+          <span id="connectionStatusText">Connected</span>
+        </div>
+
+        <div id="serviceStatusBadge" class="status-badge">
+          <span class="status-dot"></span>
+          <span id="serviceStatusText">Sysmon Checking...</span>
+        </div>
+
+        <div id="dataSourceBadge" class="source-badge live">
+          <span id="dataSourceText">LIVE SYSMON LOG</span>
+        </div>
+      </div>
+
+      <!-- Controls & Refresh Cluster -->
+      <div class="controls-cluster">
+        <div class="refresh-info">
+          Synced: <span id="lastRefreshedTime">Just now</span>
+        </div>
+
+        <button id="refreshBtn" class="btn btn-primary" title="Query latest Sysmon events">
+          <svg id="refreshIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+          </svg>
+          <span>Refresh</span>
+        </button>
+
+        <div class="toggle-group" title="Auto-refresh background timer">
+          <label>
+            <input type="checkbox" id="autoRefreshCheck" checked>
+            <span>Auto</span>
+          </label>
+          <select id="refreshIntervalSelect" class="select-sm" title="Refresh frequency">
+            <option value="3000">3s</option>
+            <option value="5000" selected>5s</option>
+            <option value="10000">10s</option>
+            <option value="30000">30s</option>
+          </select>
+        </div>
+
+        <select id="limitSelect" class="select-sm" title="Number of clean events to display">
+          <option value="50">50 events</option>
+          <option value="100" selected>100 events</option>
+          <option value="250">250 events</option>
+          <option value="500">500 events</option>
+        </select>
+
+        <button id="demoGuideBtn" class="btn btn-secondary" title="View 8-step Hackathon live demo script">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span>Demo Guide</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Container -->
+  <main class="dashboard-body">
+
+    <!-- Elevated Permission / Troubleshooting Banner -->
+    <section id="troubleBanner" class="alert-banner hidden">
+      <div class="alert-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <div class="alert-content">
+        <div class="alert-title">
+          <span>Administrator Access Required for Live Sysmon Log</span>
+          <span class="source-badge demo">DEMO FALLBACK ACTIVE</span>
+        </div>
+        <div id="troubleMessage" class="alert-desc">
+          Windows Event Log security restricts direct access to <code>Microsoft-Windows-Sysmon/Operational</code> to elevated accounts.
+        </div>
+        <ul id="troubleSteps" class="troubleshoot-steps">
+          <li>Close this terminal and start PowerShell / CMD with <strong>"Run as administrator"</strong>.</li>
+          <li>Run <code>python app.py</code> from the elevated prompt to stream live Sysmon events.</li>
+          <li>Displaying labeled sample fallback events so you can test and explore all dashboard features immediately.</li>
+        </ul>
+        <div class="alert-actions">
+          <button id="retryLiveBtn" class="btn btn-outline-amber">
+            <span>Retry Live Query</span>
+          </button>
+          <button id="forceDemoToggle" class="btn btn-secondary">
+            <span>Toggle Demo Data</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary Metrics Cards -->
+    <section class="metrics-grid">
+      <!-- Card 1: Total Events -->
+      <div class="metric-card card-total">
+        <div class="card-header">
+          <span class="card-title">Total Events</span>
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div id="statTotal" class="card-value">0</div>
+        <div class="card-subtext">
+          <span>Collector noise filtered &bull; Rate:</span>
+          <span id="statRate">0 ev/sec</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Process Creations -->
+      <div class="metric-card card-process">
+        <div class="card-header">
+          <span class="card-title">Process Creates</span>
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+          </div>
+        </div>
+        <div id="statProcess" class="card-value">0</div>
+        <div class="card-subtext">
+          <span>Event ID 1 &bull; Unique Binaries:</span>
+          <span id="statUniqueProc">0</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Network Connections -->
+      <div class="metric-card card-network">
+        <div class="card-header">
+          <span class="card-title">Network Connections</span>
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+        </div>
+        <div id="statNetwork" class="card-value">0</div>
+        <div class="card-subtext">
+          <span>Event ID 3 &bull; Inbound &amp; Outbound Sockets</span>
+        </div>
+      </div>
+
+      <!-- Card 4: File Creations -->
+      <div class="metric-card card-file">
+        <div class="card-header">
+          <span class="card-title">File Creations</span>
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+          </div>
+        </div>
+        <div id="statFile" class="card-value">0</div>
+        <div class="card-subtext">
+          <span>Event ID 11 &bull; Target File Writes</span>
+        </div>
+      </div>
+
+      <!-- Card 5: Other Events -->
+      <div class="metric-card card-other">
+        <div class="card-header">
+          <span class="card-title">Other Sysmon Events</span>
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+          </div>
+        </div>
+        <div id="statOther" class="card-value">0</div>
+        <div class="card-subtext">
+          <span>DNS (22), Reg (13), DLLs (7)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Activity Visualization & Distribution -->
+    <section class="vis-grid">
+      <!-- Left Panel: Pure SVG Event Timeline Chart -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <span>Event Activity Timeline</span>
+            </div>
+            <div class="panel-subtitle">Temporal event distribution of actual endpoint telemetry</div>
+          </div>
+          <div id="timelineStatsBadge" class="source-badge live">
+            <span id="timelineWindowText">Past Moments</span>
+          </div>
+        </div>
+
+        <div class="timeline-container">
+          <svg id="timelineSvg" class="timeline-svg" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="bar-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.9" />
+                <stop offset="100%" stop-color="#0284c7" stop-opacity="0.2" />
+              </linearGradient>
+            </defs>
+            <g id="chartGrid"></g>
+            <g id="chartBars"></g>
+            <g id="chartLabels"></g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Right Panel: Category Breakdown -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+              </svg>
+              <span>Category Breakdown</span>
+            </div>
+            <div class="panel-subtitle">Event distribution by activity type</div>
+          </div>
+        </div>
+
+        <div class="distribution-list">
+          <div class="progress-stacked" id="stackedBar">
+            <div id="barProc" class="progress-segment" style="background: #10b981; width: 0%;"></div>
+            <div id="barNet" class="progress-segment" style="background: #0284c7; width: 0%;"></div>
+            <div id="barFile" class="progress-segment" style="background: #14b8a6; width: 0%;"></div>
+            <div id="barDns" class="progress-segment" style="background: #06b6d4; width: 0%;"></div>
+            <div id="barReg" class="progress-segment" style="background: #a855f7; width: 0%;"></div>
+            <div id="barOther" class="progress-segment" style="background: #64748b; width: 0%;"></div>
+          </div>
+
+          <div class="dist-row">
+            <div class="dist-label"><span class="dist-dot" style="background: #10b981;"></span> Process Create (ID 1)</div>
+            <div id="distCountProc" class="dist-count">0 (0%)</div>
+          </div>
+          <div class="dist-row">
+            <div class="dist-label"><span class="dist-dot" style="background: #0284c7;"></span> Network Connection (ID 3)</div>
+            <div id="distCountNet" class="dist-count">0 (0%)</div>
+          </div>
+          <div class="dist-row">
+            <div class="dist-label"><span class="dist-dot" style="background: #14b8a6;"></span> File Create (ID 11)</div>
+            <div id="distCountFile" class="dist-count">0 (0%)</div>
+          </div>
+          <div class="dist-row">
+            <div class="dist-label"><span class="dist-dot" style="background: #06b6d4;"></span> DNS Query (ID 22)</div>
+            <div id="distCountDns" class="dist-count">0 (0%)</div>
+          </div>
+          <div class="dist-row">
+            <div class="dist-label"><span class="dist-dot" style="background: #a855f7;"></span> Registry Events (12/13/14)</div>
+            <div id="distCountReg" class="dist-count">0 (0%)</div>
+          </div>
+          <div class="dist-row">
+            <div class="dist-label"><span class="dist-dot" style="background: #64748b;"></span> Image / Other Sysmon Events</div>
+            <div id="distCountOther" class="dist-count">0 (0%)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Event Feed Section -->
+    <section class="feed-panel">
+      <!-- Toolbar: Search & Filters -->
+      <div class="toolbar">
+        <div class="search-box-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" class="search-input" placeholder="Search processes, commands, IPs, users, or IDs... (Press '/' to focus)">
+          <button id="searchClearBtn" class="search-clear">&times;</button>
+        </div>
+
+        <div class="filters-wrapper">
+          <!-- Event ID Filter Pills -->
+          <div class="pill-filter-group" id="idFilterGroup">
+            <button class="pill-filter active" data-filter="all">All Events</button>
+            <button class="pill-filter" data-filter="1">ID 1: Process</button>
+            <button class="pill-filter" data-filter="3">ID 3: Network</button>
+            <button class="pill-filter" data-filter="7">ID 7: Image</button>
+            <button class="pill-filter" data-filter="11">ID 11: File</button>
+            <button class="pill-filter" data-filter="registry">ID 12-14: Reg</button>
+            <button class="pill-filter" data-filter="22">ID 22: DNS</button>
+            <button class="pill-filter" data-filter="other">Other</button>
+          </div>
+
+          <select id="severitySelect" class="select-sm" title="Filter by severity level">
+            <option value="all" selected>All Severities</option>
+            <option value="info">Info</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High &amp; Critical</option>
+          </select>
+
+          <button id="sortOrderBtn" class="btn btn-secondary" title="Toggle newest / oldest order">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16"></path>
+            </svg>
+            <span id="sortOrderText">Newest First</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Feed Table -->
+      <div class="table-container">
+        <table class="event-table">
+          <thead>
+            <tr>
+              <th style="width: 130px;">Timestamp</th>
+              <th style="width: 140px;">Event</th>
+              <th style="width: 280px;">Process / Target</th>
+              <th style="width: 160px;">User</th>
+              <th>Key Details</th>
+              <th style="width: 90px; text-align: center;">Severity</th>
+              <th style="width: 75px; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="eventTableBody">
+            <!-- Populated dynamically via vanilla JS -->
+          </tbody>
+        </table>
+
+        <!-- Empty State Message -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <div class="empty-title">No matching Sysmon events found</div>
+          <div class="empty-desc">Try clearing your search query or choosing another event filter.</div>
+          <button id="resetFiltersBtn" class="btn btn-secondary" style="margin-top: 0.5rem;">Reset All Filters</button>
+        </div>
+      </div>
+
+      <!-- Pagination & Count Bar -->
+      <div class="pagination-bar">
+        <div id="feedSummary" class="feed-stats-summary">Showing 0 of 0 events</div>
+        <div class="page-controls">
+          <button id="prevPageBtn" class="btn-page" disabled>&larr; Prev</button>
+          <span id="pageNumbers"></span>
+          <button id="nextPageBtn" class="btn-page" disabled>Next &rarr;</button>
+          <select id="pageSizeSelect" class="select-sm" style="margin-left: 0.5rem;">
+            <option value="15" selected>15 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Event Details Modal Dialog -->
+  <div id="detailsModal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span id="modalEventIdBadge" class="badge">Event ID -</span>
+          <span id="modalEventTitle" style="font-size: 1.1rem; font-weight: 700; color: #fff;">Event Inspector</span>
+          <span id="modalSeverityPill" class="sev-pill">INFO</span>
+          <span id="modalDemoPill" class="source-badge demo" style="display: none;">SAMPLE DATA</span>
+        </div>
+        <button id="modalCloseBtn" class="modal-close" title="Close (Esc)">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Action Summary Box -->
+        <div class="action-summary-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; color: var(--accent-cyan);">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span id="modalKeyDetailsText">Action Summary</span>
+        </div>
+
+        <!-- Quick Attribute Grid -->
+        <div class="info-grid">
+          <div class="info-card">
+            <div class="info-card-label">Timestamp (UTC / Local)</div>
+            <div id="modalTimestamp" class="info-card-val">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-label">Computer Host</div>
+            <div id="modalComputer" class="info-card-val">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-label">Executing User</div>
+            <div id="modalUser" class="info-card-val">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-label">PID / Record ID</div>
+            <div id="modalPidRecord" class="info-card-val">-</div>
+          </div>
+        </div>
+
+        <!-- Command Line -->
+        <div id="modalCmdSection">
+          <div class="section-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>Command Line</span>
+          </div>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyElementText('modalCommandLine')">Copy</button>
+            <span id="modalCommandLine">N/A</span>
+          </div>
+        </div>
+
+        <!-- Process & Parent Hierarchy Section -->
+        <div>
+          <div class="section-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            <span>Process &amp; Parent Hierarchy</span>
+          </div>
+          <div class="hierarchy-container" id="modalHierarchyContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Hashes & Signatures Section -->
+        <div id="modalHashesSection">
+          <div class="section-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Cryptographic Hashes &amp; Integrity</span>
+          </div>
+          <div class="hashes-grid" id="modalHashesContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Network / Target Details (if present) -->
+        <div id="modalTargetSection" style="display: none;">
+          <div class="section-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+            </svg>
+            <span id="modalTargetSectionTitle">Network &amp; Target Artifacts</span>
+          </div>
+          <table class="fields-table">
+            <tbody id="modalTargetTable"></tbody>
+          </table>
+        </div>
+
+        <!-- Structured EventData Fields -->
+        <div>
+          <div class="section-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+            </svg>
+            <span>All Structured Event Data Fields</span>
+          </div>
+          <table class="fields-table">
+            <tbody id="modalAllFieldsTable"></tbody>
+          </table>
+        </div>
+
+        <!-- Raw XML Viewer -->
+        <div>
+          <div class="section-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            <span>Raw Event XML</span>
+          </div>
+          <div style="position: relative;">
+            <button class="copy-btn" onclick="copyElementText('modalRawXml')">Copy XML</button>
+            <pre id="modalRawXml" class="raw-xml-box"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo Guide Modal Dialog -->
+  <div id="guideModal" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="badge badge-process">LIVE DEMO SCRIPT</span>
+          <span style="font-size: 1.1rem; font-weight: 700; color: #fff;">Sysmon Sentinel Presentation Guide</span>
+        </div>
+        <button id="guideCloseBtn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+          Follow these 8 steps during your hackathon presentation to showcase live Windows Sysmon telemetry:
+        </p>
+
+        <div class="guide-step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <div class="step-title">Start Flask Locally</div>
+            <div>Open an <strong>Administrator PowerShell / CMD</strong> prompt and run <code>python app.py</code>. The server strictly binds to <code>http://127.0.0.1:5000</code>.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <div class="step-title">Open Dashboard in Browser</div>
+            <div>Open <code>http://127.0.0.1:5000</code>. Note the <strong>Connected</strong> indicator, <strong>Sysmon64 Active</strong> badge, and that internal collector queries (wevtutil) are automatically filtered out.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <div class="step-title">Tour Summary Cards &amp; Activity Timeline</div>
+            <div>Highlight live counts of Total Events, Process Creates (ID 1), Network (ID 3), and File Creates (ID 11). The SVG chart displays live temporal distribution.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            <div class="step-title">Trigger Live Event: Open Notepad</div>
+            <div>Press <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">Win + R</kbd>, type <code>notepad.exe</code>, and press Enter. Sysmon immediately detects process creation.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">5</div>
+          <div class="step-text">
+            <div class="step-title">Watch Auto-Refresh</div>
+            <div>Within 5 seconds (or click <strong>Refresh</strong>), observe the new Event ID 1 row appear at the very top of the feed with an emerald badge and clean process name.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">6</div>
+          <div class="step-text">
+            <div class="step-title">Inspect Event Details</div>
+            <div>Click the <code>notepad.exe</code> event row or <strong>Inspect</strong>. Show the hierarchy (<code>explorer.exe</code> &rarr; <code>notepad.exe</code>), command line, and SHA256 hashes with 1-click copy.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">7</div>
+          <div class="step-text">
+            <div class="step-title">Demonstrate Search &amp; Filters</div>
+            <div>Type <code>notepad</code> into the search box to instantly isolate the event, or click the <strong>ID 1: Process</strong> filter pill.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">8</div>
+          <div class="step-text">
+            <div class="step-title">Trigger File Create or Network / DNS</div>
+            <div>Save a file from Notepad, or run <code>ping google.com</code> in CMD to observe File Created (ID 11), DNS Query (ID 22), and Network Connection (ID 3) streaming live into the feed.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    Sysmon Sentinel &bull; Local Endpoint Monitoring Dashboard &bull; Microsoft-Windows-Sysmon/Operational &bull; 127.0.0.1
+  </footer>
+
+  <!-- -----------------------------------------------------------------------
+       Vanilla JavaScript Client Logic
+       ----------------------------------------------------------------------- -->
+  <script>
+    (function () {
+      "use strict";
+
+      // Application State
+      const state = {
+        events: [],
+        filteredEvents: [],
+        eventsMap: new Map(), // UID -> Event Object
+        stats: null,
+        status: null,
+        activeFilter: "all",
+        searchQuery: "",
+        severityFilter: "all",
+        sortOrder: "desc", // "desc" = newest first, "asc" = oldest first
+        currentPage: 1,
+        pageSize: 15,
+        limit: 100,
+        source: "auto", // "auto", "live", "demo"
+        autoRefresh: true,
+        refreshInterval: 5000,
+        timerId: null,
+        isFetching: false,
+        lastFetchTimestamp: null
+      };
+
+      // DOM Elements
+      const els = {
+        connectionStatusBadge: document.getElementById("connectionStatusBadge"),
+        connectionStatusText: document.getElementById("connectionStatusText"),
+        serviceStatusBadge: document.getElementById("serviceStatusBadge"),
+        serviceStatusText: document.getElementById("serviceStatusText"),
+        dataSourceBadge: document.getElementById("dataSourceBadge"),
+        dataSourceText: document.getElementById("dataSourceText"),
+        lastRefreshedTime: document.getElementById("lastRefreshedTime"),
+        refreshBtn: document.getElementById("refreshBtn"),
+        refreshIcon: document.getElementById("refreshIcon"),
+        autoRefreshCheck: document.getElementById("autoRefreshCheck"),
+        refreshIntervalSelect: document.getElementById("refreshIntervalSelect"),
+        limitSelect: document.getElementById("limitSelect"),
+        demoGuideBtn: document.getElementById("demoGuideBtn"),
+        
+        troubleBanner: document.getElementById("troubleBanner"),
+        troubleMessage: document.getElementById("troubleMessage"),
+        troubleSteps: document.getElementById("troubleSteps"),
+        retryLiveBtn: document.getElementById("retryLiveBtn"),
+        forceDemoToggle: document.getElementById("forceDemoToggle"),
+        
+        statTotal: document.getElementById("statTotal"),
+        statProcess: document.getElementById("statProcess"),
+        statNetwork: document.getElementById("statNetwork"),
+        statFile: document.getElementById("statFile"),
+        statOther: document.getElementById("statOther"),
+        statRate: document.getElementById("statRate"),
+        statUniqueProc: document.getElementById("statUniqueProc"),
+        
+        timelineSvg: document.getElementById("timelineSvg"),
+        chartGrid: document.getElementById("chartGrid"),
+        chartBars: document.getElementById("chartBars"),
+        chartLabels: document.getElementById("chartLabels"),
+        timelineWindowText: document.getElementById("timelineWindowText"),
+        
+        barProc: document.getElementById("barProc"),
+        barNet: document.getElementById("barNet"),
+        barFile: document.getElementById("barFile"),
+        barDns: document.getElementById("barDns"),
+        barReg: document.getElementById("barReg"),
+        barOther: document.getElementById("barOther"),
+        distCountProc: document.getElementById("distCountProc"),
+        distCountNet: document.getElementById("distCountNet"),
+        distCountFile: document.getElementById("distCountFile"),
+        distCountDns: document.getElementById("distCountDns"),
+        distCountReg: document.getElementById("distCountReg"),
+        distCountOther: document.getElementById("distCountOther"),
+        
+        searchInput: document.getElementById("searchInput"),
+        searchClearBtn: document.getElementById("searchClearBtn"),
+        idFilterGroup: document.getElementById("idFilterGroup"),
+        severitySelect: document.getElementById("severitySelect"),
+        sortOrderBtn: document.getElementById("sortOrderBtn"),
+        sortOrderText: document.getElementById("sortOrderText"),
+        
+        eventTableBody: document.getElementById("eventTableBody"),
+        emptyState: document.getElementById("emptyState"),
+        resetFiltersBtn: document.getElementById("resetFiltersBtn"),
+        feedSummary: document.getElementById("feedSummary"),
+        prevPageBtn: document.getElementById("prevPageBtn"),
+        nextPageBtn: document.getElementById("nextPageBtn"),
+        pageNumbers: document.getElementById("pageNumbers"),
+        pageSizeSelect: document.getElementById("pageSizeSelect"),
+        
+        detailsModal: document.getElementById("detailsModal"),
+        modalCloseBtn: document.getElementById("modalCloseBtn"),
+        modalEventIdBadge: document.getElementById("modalEventIdBadge"),
+        modalEventTitle: document.getElementById("modalEventTitle"),
+        modalSeverityPill: document.getElementById("modalSeverityPill"),
+        modalDemoPill: document.getElementById("modalDemoPill"),
+        modalKeyDetailsText: document.getElementById("modalKeyDetailsText"),
+        modalTimestamp: document.getElementById("modalTimestamp"),
+        modalComputer: document.getElementById("modalComputer"),
+        modalUser: document.getElementById("modalUser"),
+        modalPidRecord: document.getElementById("modalPidRecord"),
+        modalCommandLine: document.getElementById("modalCommandLine"),
+        modalHierarchyContainer: document.getElementById("modalHierarchyContainer"),
+        modalHashesSection: document.getElementById("modalHashesSection"),
+        modalHashesContainer: document.getElementById("modalHashesContainer"),
+        modalTargetSection: document.getElementById("modalTargetSection"),
+        modalTargetSectionTitle: document.getElementById("modalTargetSectionTitle"),
+        modalTargetTable: document.getElementById("modalTargetTable"),
+        modalAllFieldsTable: document.getElementById("modalAllFieldsTable"),
+        modalRawXml: document.getElementById("modalRawXml"),
+        
+        guideModal: document.getElementById("guideModal"),
+        guideCloseBtn: document.getElementById("guideCloseBtn")
+      };
+
+      // -----------------------------------------------------------------------
+      // Utilities
+      // -----------------------------------------------------------------------
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function formatTimestamp(isoStr) {
+        if (!isoStr) return { time: "--:--:--", rel: "", full: "" };
+        try {
+          const d = new Date(isoStr);
+          if (isNaN(d.getTime())) return { time: isoStr, rel: "", full: isoStr };
+          const time = d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+          let rel = "";
+          if (diffSec < 60) rel = `${Math.max(diffSec, 0)}s ago`;
+          else if (diffSec < 3600) rel = `${Math.floor(diffSec / 60)}m ago`;
+          else rel = `${Math.floor(diffSec / 3600)}h ago`;
+          return { time, rel, full: d.toLocaleString() + " (" + d.toISOString() + ")" };
+        } catch {
+          return { time: isoStr, rel: "", full: isoStr };
+        }
+      }
+
+      window.copyElementText = function (elementId) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        const text = el.innerText || el.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = el.parentElement ? el.parentElement.querySelector(".copy-btn") : null;
+          if (btn) {
+            const orig = btn.innerText;
+            btn.innerText = "Copied!";
+            setTimeout(() => { btn.innerText = orig; }, 1500);
+          }
+        });
+      };
+
+      window.copyRawString = function (text, btnElement) {
+        navigator.clipboard.writeText(text).then(() => {
+          if (btnElement) {
+            const orig = btnElement.innerText;
+            btnElement.innerText = "Copied!";
+            setTimeout(() => { btnElement.innerText = orig; }, 1500);
+          }
+        });
+      };
+
+      // -----------------------------------------------------------------------
+      // API Fetching & State Updates
+      // -----------------------------------------------------------------------
+      async function fetchDiagnostics() {
+        try {
+          const res = await fetch("/api/status");
+          if (!res.ok) throw new Error("Status endpoint error");
+          const data = await res.json();
+          state.status = data;
+
+          if (data.sysmon_service && data.sysmon_service.installed) {
+            if (data.sysmon_service.running) {
+              els.serviceStatusBadge.className = "status-badge connected";
+              els.serviceStatusText.textContent = `${data.sysmon_service.service_name} Active`;
+            } else {
+              els.serviceStatusBadge.className = "status-badge warning";
+              els.serviceStatusText.textContent = `${data.sysmon_service.service_name} Stopped`;
+            }
+          } else {
+            els.serviceStatusBadge.className = "status-badge error";
+            els.serviceStatusText.textContent = "Sysmon Not Found";
+          }
+        } catch (e) {
+          els.serviceStatusBadge.className = "status-badge error";
+          els.serviceStatusText.textContent = "Diagnostic Error";
+        }
+      }
+
+      async function fetchEvents() {
+        if (state.isFetching) return;
+        state.isFetching = true;
+        els.refreshBtn.disabled = true;
+        els.refreshIcon.style.animation = "spin 0.8s linear infinite";
+
+        const url = `/api/events?limit=${state.limit}&source=${state.source}`;
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+
+          state.lastFetchTimestamp = new Date();
+          els.lastRefreshedTime.textContent = state.lastFetchTimestamp.toLocaleTimeString([], { hour12: false });
+
+          if (res.ok && data.status === "ok") {
+            els.connectionStatusBadge.className = "status-badge connected";
+            els.connectionStatusText.textContent = "Connected";
+            els.troubleBanner.classList.add("hidden");
+
+            if (data.source === "demo") {
+              els.dataSourceBadge.className = "source-badge demo";
+              els.dataSourceText.textContent = "DEMO SAMPLE MODE";
+            } else {
+              els.dataSourceBadge.className = "source-badge live";
+              els.dataSourceText.textContent = "LIVE SYSMON LOG";
+            }
+          } else if (data.status === "permission_required" || res.status === 403) {
+            els.connectionStatusBadge.className = "status-badge warning";
+            els.connectionStatusText.textContent = "Access Denied";
+            els.dataSourceBadge.className = "source-badge demo";
+            els.dataSourceText.textContent = "DEMO FALLBACK ACTIVE";
+
+            els.troubleBanner.classList.remove("hidden");
+            els.troubleMessage.innerHTML = `<strong>Permission Denied:</strong> ${escapeHtml(data.error_message || "Elevated privileges required to read Microsoft-Windows-Sysmon/Operational.")}`;
+            
+            if (Array.isArray(data.troubleshooting)) {
+              els.troubleSteps.innerHTML = data.troubleshooting
+                .map(step => `<li>${escapeHtml(step).replace(/`([^`]+)`/g, '<code>$1</code>')}</li>`)
+                .join("");
+            }
+          } else {
+            els.connectionStatusBadge.className = "status-badge error";
+            els.connectionStatusText.textContent = "Log Error";
+            els.troubleBanner.classList.remove("hidden");
+            els.troubleMessage.textContent = data.error_message || "Failed to retrieve events.";
+          }
+
+          const rawList = Array.isArray(data.events) ? data.events : [];
+          
+          // Index events by unique key for resilient modal lookups
+          state.eventsMap.clear();
+          state.events = rawList.map((ev, i) => {
+            const uid = ev.record_id ? String(ev.record_id) : `evt-${ev.event_id}-${i}-${Date.now()}`;
+            ev._uid = uid;
+            state.eventsMap.set(uid, ev);
+            return ev;
+          });
+
+          state.stats = data.stats || null;
+
+          updateMetrics();
+          applyFilters();
+          renderTimeline();
+          renderCategoryDistribution();
+
+        } catch (err) {
+          els.connectionStatusBadge.className = "status-badge error";
+          els.connectionStatusText.textContent = "Disconnected";
+        } finally {
+          state.isFetching = false;
+          els.refreshBtn.disabled = false;
+          els.refreshIcon.style.animation = "";
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Metrics & Visualizations
+      // -----------------------------------------------------------------------
+      function updateMetrics() {
+        const stats = state.stats || {
+          total: state.events.length,
+          process_create: 0,
+          network: 0,
+          file_create: 0,
+          other: 0,
+          unique_processes_count: 0
+        };
+
+        els.statTotal.textContent = stats.total || 0;
+        els.statProcess.textContent = stats.process_create || 0;
+        els.statNetwork.textContent = stats.network || 0;
+        els.statFile.textContent = stats.file_create || 0;
+        els.statOther.textContent = stats.other || 0;
+
+        els.statUniqueProc.textContent = stats.unique_processes_count || 0;
+        const ratePerSec = (stats.total > 0) ? ((stats.total / 60).toFixed(1) + " /sec") : "0 /sec";
+        els.statRate.textContent = ratePerSec;
+      }
+
+      function renderCategoryDistribution() {
+        const total = state.events.length;
+        if (total === 0) {
+          els.stackedBar.querySelectorAll(".progress-segment").forEach(el => el.style.width = "0%");
+          return;
+        }
+
+        const counts = { proc: 0, net: 0, file: 0, dns: 0, reg: 0, other: 0 };
+        state.events.forEach(ev => {
+          const eid = ev.event_id;
+          if (eid === 1) counts.proc++;
+          else if (eid === 3) counts.net++;
+          else if (eid === 11) counts.file++;
+          else if (eid === 22) counts.dns++;
+          else if ([12, 13, 14].includes(eid)) counts.reg++;
+          else counts.other++;
+        });
+
+        const pct = k => ((counts[k] / total) * 100).toFixed(1);
+
+        els.barProc.style.width = pct("proc") + "%";
+        els.barNet.style.width = pct("net") + "%";
+        els.barFile.style.width = pct("file") + "%";
+        els.barDns.style.width = pct("dns") + "%";
+        els.barReg.style.width = pct("reg") + "%";
+        els.barOther.style.width = pct("other") + "%";
+
+        els.distCountProc.textContent = `${counts.proc} (${pct("proc")}%)`;
+        els.distCountNet.textContent = `${counts.net} (${pct("net")}%)`;
+        els.distCountFile.textContent = `${counts.file} (${pct("file")}%)`;
+        els.distCountDns.textContent = `${counts.dns} (${pct("dns")}%)`;
+        els.distCountReg.textContent = `${counts.reg} (${pct("reg")}%)`;
+        els.distCountOther.textContent = `${counts.other} (${pct("other")}%)`;
+      }
+
+      function renderTimeline() {
+        els.chartGrid.innerHTML = "";
+        els.chartBars.innerHTML = "";
+        els.chartLabels.innerHTML = "";
+
+        if (state.events.length === 0) return;
+
+        const numBins = 12;
+        const bins = Array.from({ length: numBins }, () => 0);
+        const labels = Array.from({ length: numBins }, () => "");
+
+        const timestamps = state.events
+          .map(e => new Date(e.timestamp).getTime())
+          .filter(t => !isNaN(t));
+
+        if (timestamps.length === 0) return;
+
+        const minTime = Math.min(...timestamps);
+        const maxTime = Math.max(...timestamps);
+        const span = Math.max(maxTime - minTime, 60000);
+
+        timestamps.forEach(t => {
+          const normalized = (t - minTime) / span;
+          let idx = Math.floor(normalized * numBins);
+          if (idx >= numBins) idx = numBins - 1;
+          bins[idx]++;
+        });
+
+        for (let i = 0; i < numBins; i++) {
+          const binTime = new Date(minTime + (i / numBins) * span);
+          labels[i] = binTime.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
+        }
+
+        const maxVal = Math.max(...bins, 1);
+        const svgW = 1000;
+        const svgH = 160;
+        const barPad = 8;
+        const barW = (svgW / numBins) - barPad;
+
+        for (let y = 30; y < svgH; y += 40) {
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("x1", "0");
+          line.setAttribute("y1", y);
+          line.setAttribute("x2", svgW);
+          line.setAttribute("y2", y);
+          line.setAttribute("class", "chart-grid-line");
+          els.chartGrid.appendChild(line);
+        }
+
+        bins.forEach((cnt, idx) => {
+          const barH = (cnt / maxVal) * (svgH - 40);
+          const x = idx * (barW + barPad) + 4;
+          const y = svgH - barH - 20;
+
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          rect.setAttribute("x", x);
+          rect.setAttribute("y", y);
+          rect.setAttribute("width", barW);
+          rect.setAttribute("height", Math.max(barH, 3));
+          rect.setAttribute("rx", "3");
+          rect.setAttribute("class", "chart-bar");
+
+          const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+          title.textContent = `Time: ${labels[idx]} • Events: ${cnt}`;
+          rect.appendChild(title);
+          els.chartBars.appendChild(rect);
+
+          if (idx % 3 === 0 || idx === numBins - 1) {
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", x + barW / 2);
+            text.setAttribute("y", svgH - 4);
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("class", "chart-label");
+            text.textContent = labels[idx];
+            els.chartLabels.appendChild(text);
+          }
+        });
+
+        els.timelineWindowText.textContent = `${labels[0]} – ${labels[numBins - 1]}`;
+      }
+
+      // -----------------------------------------------------------------------
+      // Filtering, Sorting, and Pagination
+      // -----------------------------------------------------------------------
+      function applyFilters() {
+        let res = state.events.slice();
+
+        // 1. Event ID Filter
+        if (state.activeFilter !== "all") {
+          if (state.activeFilter === "registry") {
+            res = res.filter(e => [12, 13, 14].includes(Number(e.event_id)));
+          } else if (state.activeFilter === "other") {
+            const common = [1, 3, 7, 11, 12, 13, 14, 22];
+            res = res.filter(e => !common.includes(Number(e.event_id)));
+          } else {
+            const targetId = Number(state.activeFilter);
+            res = res.filter(e => Number(e.event_id) === targetId);
+          }
+        }
+
+        // 2. Severity Filter
+        if (state.severityFilter !== "all") {
+          if (state.severityFilter === "high") {
+            res = res.filter(e => ["high", "critical"].includes(e.severity));
+          } else {
+            res = res.filter(e => e.severity === state.severityFilter);
+          }
+        }
+
+        // 3. Search Query
+        if (state.searchQuery.trim()) {
+          const q = state.searchQuery.toLowerCase();
+          res = res.filter(e => {
+            return (
+              (e.process_name && e.process_name.toLowerCase().includes(q)) ||
+              (e.command_line && e.command_line.toLowerCase().includes(q)) ||
+              (e.key_details && e.key_details.toLowerCase().includes(q)) ||
+              (e.user && e.user.toLowerCase().includes(q)) ||
+              (e.destination_ip && e.destination_ip.toLowerCase().includes(q)) ||
+              (e.destination_hostname && e.destination_hostname.toLowerCase().includes(q)) ||
+              (e.target_filename && e.target_filename.toLowerCase().includes(q)) ||
+              (e.query_name && e.query_name.toLowerCase().includes(q)) ||
+              (e.event_type && e.event_type.toLowerCase().includes(q)) ||
+              (String(e.event_id).includes(q)) ||
+              (e.computer && e.computer.toLowerCase().includes(q))
+            );
+          });
+        }
+
+        // 4. Sort Order
+        res.sort((a, b) => {
+          const ta = new Date(a.timestamp).getTime() || 0;
+          const tb = new Date(b.timestamp).getTime() || 0;
+          return state.sortOrder === "desc" ? tb - ta : ta - tb;
+        });
+
+        state.filteredEvents = res;
+        state.currentPage = 1;
+        renderTable();
+      }
+
+      function renderTable() {
+        const total = state.filteredEvents.length;
+        els.feedSummary.textContent = `Showing ${total > 0 ? (state.currentPage - 1) * state.pageSize + 1 : 0}–${Math.min(total, state.currentPage * state.pageSize)} of ${total} events (Filtered from ${state.events.length})`;
+
+        if (total === 0) {
+          els.eventTableBody.innerHTML = "";
+          els.emptyState.style.display = "flex";
+          renderPagination(0);
+          return;
+        }
+
+        els.emptyState.style.display = "none";
+
+        const start = (state.currentPage - 1) * state.pageSize;
+        const pageItems = state.filteredEvents.slice(start, start + state.pageSize);
+
+        const rowsHtml = pageItems.map((ev) => {
+          const ts = formatTimestamp(ev.timestamp);
+          const proc = ev.process_name || "System";
+          const user = ev.user || "N/A";
+
+          // Formatted secondary subtitle line for Process / Target column
+          let subtext = "";
+          if (ev.event_id === 11 && ev.target_filename) {
+            subtext = `Target: ${ev.target_filename}`;
+          } else if (ev.event_id === 3 && ev.destination_ip) {
+            subtext = `Remote: ${ev.destination_ip}:${ev.destination_port || ''}`;
+          } else if (ev.event_id === 22 && ev.query_name) {
+            subtext = `Query: ${ev.query_name}`;
+          } else if ([12, 13, 14].includes(ev.event_id) && ev.target_object) {
+            subtext = `Key: ${ev.target_object}`;
+          } else if (ev.event_id === 7 && ev.data && ev.data.ImageLoaded) {
+            subtext = `DLL: ${ev.data.ImageLoaded.split('\\').pop()}`;
+          } else {
+            subtext = ev.command_line || ev.image || "N/A";
+          }
+
+          const keyDetails = ev.key_details || subtext;
+
+          return `
+            <tr class="event-row" data-uid="${escapeHtml(ev._uid)}">
+              <td>
+                <div class="event-time" title="${escapeHtml(ts.full)}">${escapeHtml(ts.time)}</div>
+                <span class="event-time-relative">${escapeHtml(ts.rel)}</span>
+              </td>
+              <td>
+                <span class="badge ${escapeHtml(ev.badge_class || 'badge-other')}">
+                  ID ${escapeHtml(ev.event_id)}
+                </span>
+                <div style="font-size: 0.72rem; color: #cbd5e1; margin-top: 3px;">
+                  ${escapeHtml(ev.event_type)}
+                </div>
+              </td>
+              <td>
+                <div class="process-cell">
+                  <div class="process-name-line">
+                    <span class="proc-name">${escapeHtml(proc)}</span>
+                    ${ev.process_id ? `<span class="pid-tag">PID ${escapeHtml(ev.process_id)}</span>` : ''}
+                  </div>
+                  <div class="process-subtext" title="${escapeHtml(subtext)}">${escapeHtml(subtext)}</div>
+                </div>
+              </td>
+              <td class="user-cell" title="${escapeHtml(user)}">
+                ${escapeHtml(user)}
+              </td>
+              <td class="details-cell" title="${escapeHtml(keyDetails)}">
+                ${escapeHtml(keyDetails)}
+              </td>
+              <td style="text-align: center;">
+                <span class="sev-pill sev-${escapeHtml(ev.severity || 'info')}">${escapeHtml(ev.severity || 'INFO')}</span>
+              </td>
+              <td style="text-align: right;">
+                <button class="action-btn inspect-btn" data-uid="${escapeHtml(ev._uid)}">Inspect</button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+        els.eventTableBody.innerHTML = rowsHtml;
+
+        // Unified Event Delegation for Row and Button Clicks
+        els.eventTableBody.querySelectorAll(".event-row").forEach(row => {
+          row.addEventListener("click", (e) => {
+            const uid = row.getAttribute("data-uid");
+            const ev = state.eventsMap.get(uid);
+            if (ev) openEventDetails(ev);
+          });
+        });
+
+        renderPagination(total);
+      }
+
+      function renderPagination(total) {
+        const totalPages = Math.ceil(total / state.pageSize) || 1;
+        els.prevPageBtn.disabled = state.currentPage <= 1;
+        els.nextPageBtn.disabled = state.currentPage >= totalPages;
+
+        let btns = "";
+        const maxVisible = 5;
+        let startPage = Math.max(1, state.currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+        if (endPage - startPage < maxVisible - 1) {
+          startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+          btns += `<button class="btn-page ${p === state.currentPage ? 'active' : ''}" data-page="${p}">${p}</button>`;
+        }
+        els.pageNumbers.innerHTML = btns;
+
+        els.pageNumbers.querySelectorAll(".btn-page").forEach(b => {
+          b.addEventListener("click", () => {
+            state.currentPage = Number(b.getAttribute("data-page"));
+            renderTable();
+          });
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // Event Details Modal Inspector
+      // -----------------------------------------------------------------------
+      function openEventDetails(ev) {
+        if (!ev) return;
+
+        els.modalEventIdBadge.className = `badge ${ev.badge_class || 'badge-other'}`;
+        els.modalEventIdBadge.textContent = `Event ID ${ev.event_id}`;
+        els.modalEventTitle.textContent = ev.event_type || "Sysmon Event";
+        
+        els.modalSeverityPill.className = `sev-pill sev-${ev.severity || 'info'}`;
+        els.modalSeverityPill.textContent = (ev.severity || 'INFO').toUpperCase();
+
+        if (ev.is_demo) {
+          els.modalDemoPill.style.display = "inline-flex";
+        } else {
+          els.modalDemoPill.style.display = "none";
+        }
+
+        // Action Summary Box
+        els.modalKeyDetailsText.textContent = ev.key_details || ev.event_type || "Sysmon Event";
+
+        // Quick Metadata Grid
+        const tsFormatted = formatTimestamp(ev.timestamp);
+        els.modalTimestamp.textContent = tsFormatted.full || ev.timestamp || "N/A";
+        els.modalComputer.textContent = ev.computer || "N/A";
+        els.modalUser.textContent = ev.user || "N/A";
+        els.modalPidRecord.textContent = `PID: ${ev.process_id || 'N/A'} | Rec: ${ev.record_id || 'N/A'}`;
+
+        // Command Line
+        els.modalCommandLine.textContent = ev.command_line || ev.image || "No command line recorded for this event.";
+
+        // Process Hierarchy Tree
+        const hasParent = ev.parent_image || ev.parent_process_id || ev.parent_command_line;
+        els.modalHierarchyContainer.innerHTML = `
+          <div class="hierarchy-node">
+            <div class="node-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+              <span>PARENT PROCESS</span>
+            </div>
+            <div class="node-row"><strong>Image:</strong> ${escapeHtml(ev.parent_image || (hasParent ? 'N/A' : 'System Parent / Desktop Shell'))}</div>
+            <div class="node-row"><strong>PID:</strong> ${escapeHtml(ev.parent_process_id || 'N/A')} &bull; <strong>Process:</strong> ${escapeHtml(ev.parent_process_name || 'N/A')}</div>
+            ${ev.parent_command_line ? `<div class="node-row"><strong>Command:</strong> ${escapeHtml(ev.parent_command_line)}</div>` : ''}
+          </div>
+
+          <div class="hierarchy-divider">
+            &darr; Spawned Target Process
+          </div>
+
+          <div class="hierarchy-node" style="border-color: rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.03);">
+            <div class="node-header" style="color: var(--accent-cyan);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              <span>CURRENT PROCESS / TARGET</span>
+            </div>
+            <div class="node-row"><strong>Image:</strong> ${escapeHtml(ev.image || 'N/A')}</div>
+            <div class="node-row"><strong>PID:</strong> ${escapeHtml(ev.process_id || 'N/A')} &bull; <strong>Process:</strong> ${escapeHtml(ev.process_name || 'N/A')}</div>
+            <div class="node-row"><strong>Command:</strong> ${escapeHtml(ev.command_line || 'N/A')}</div>
+            ${ev.integrity_level ? `<div class="node-row"><strong>Integrity:</strong> ${escapeHtml(ev.integrity_level)}</div>` : ''}
+            ${ev.data && ev.data.CurrentDirectory ? `<div class="node-row"><strong>Current Directory:</strong> ${escapeHtml(ev.data.CurrentDirectory)}</div>` : ''}
+          </div>
+        `;
+
+        // Cryptographic Hashes Block
+        const hashesObj = ev.parsed_hashes || {};
+        const hashKeys = Object.keys(hashesObj);
+        if (hashKeys.length > 0) {
+          els.modalHashesSection.style.display = "block";
+          els.modalHashesContainer.innerHTML = hashKeys.map(algo => {
+            const val = hashesObj[algo];
+            return `
+              <div class="hash-card">
+                <span class="hash-badge">${escapeHtml(algo)}</span>
+                <span class="hash-value">${escapeHtml(val)}</span>
+                <button class="hash-copy-btn" onclick="copyRawString('${escapeHtml(val)}', this)">Copy</button>
+              </div>
+            `;
+          }).join("");
+        } else if (ev.hashes) {
+          els.modalHashesSection.style.display = "block";
+          els.modalHashesContainer.innerHTML = `
+            <div class="hash-card">
+              <span class="hash-badge">HASH</span>
+              <span class="hash-value">${escapeHtml(ev.hashes)}</span>
+              <button class="hash-copy-btn" onclick="copyRawString('${escapeHtml(ev.hashes)}', this)">Copy</button>
+            </div>
+          `;
+        } else {
+          els.modalHashesSection.style.display = "block";
+          els.modalHashesContainer.innerHTML = `<div class="no-data-notice">No cryptographic hashes captured for this event type.</div>`;
+        }
+
+        // Target / Network Section
+        const targetFields = [];
+        if (ev.destination_ip) targetFields.push({ name: "Destination IP", val: ev.destination_ip });
+        if (ev.destination_port) targetFields.push({ name: "Destination Port", val: `${ev.destination_port} (${ev.destination_port_name || ''})` });
+        if (ev.destination_hostname) targetFields.push({ name: "Destination Hostname", val: ev.destination_hostname });
+        if (ev.source_ip) targetFields.push({ name: "Source Socket", val: `${ev.source_ip}:${ev.source_port}` });
+        if (ev.protocol) targetFields.push({ name: "Protocol", val: ev.protocol.toUpperCase() });
+        if (ev.target_filename) targetFields.push({ name: "Target Filename", val: ev.target_filename });
+        if (ev.creation_time) targetFields.push({ name: "Creation Time", val: ev.creation_time });
+        if (ev.target_object) targetFields.push({ name: "Target Object", val: ev.target_object });
+        if (ev.registry_details) targetFields.push({ name: "Registry Details", val: ev.registry_details });
+        if (ev.query_name) targetFields.push({ name: "DNS Query Name", val: ev.query_name });
+        if (ev.query_results) targetFields.push({ name: "DNS Query Results", val: ev.query_results });
+
+        if (targetFields.length > 0) {
+          els.modalTargetSection.style.display = "block";
+          els.modalTargetTable.innerHTML = targetFields
+            .map(f => `<tr><td class="field-name">${escapeHtml(f.name)}</td><td class="field-val">${escapeHtml(f.val)}</td></tr>`)
+            .join("");
+        } else {
+          els.modalTargetSection.style.display = "none";
+        }
+
+        // All EventData Fields
+        const allData = ev.data || {};
+        const allKeys = Object.keys(allData);
+        if (allKeys.length > 0) {
+          els.modalAllFieldsTable.innerHTML = allKeys
+            .map(k => `<tr><td class="field-name">${escapeHtml(k)}</td><td class="field-val">${escapeHtml(allData[k])}</td></tr>`)
+            .join("");
+        } else {
+          els.modalAllFieldsTable.innerHTML = "<tr><td colspan='2' style='color: var(--text-dim);'>No structured EventData fields present</td></tr>";
+        }
+
+        // Raw XML
+        els.modalRawXml.textContent = ev.raw_xml || "<!-- No Raw XML Available -->";
+
+        els.detailsModal.classList.add("open");
+      }
+
+      function closeDetailsModal() {
+        els.detailsModal.classList.remove("open");
+      }
+
+      // -----------------------------------------------------------------------
+      // Event Listeners & Setup
+      // -----------------------------------------------------------------------
+      function setupListeners() {
+        els.refreshBtn.addEventListener("click", () => fetchEvents());
+
+        els.autoRefreshCheck.addEventListener("change", (e) => {
+          state.autoRefresh = e.target.checked;
+          resetTimer();
+        });
+
+        els.refreshIntervalSelect.addEventListener("change", (e) => {
+          state.refreshInterval = Number(e.target.value);
+          resetTimer();
+        });
+
+        els.limitSelect.addEventListener("change", (e) => {
+          state.limit = Number(e.target.value);
+          fetchEvents();
+        });
+
+        let searchTimeout = null;
+        els.searchInput.addEventListener("input", (e) => {
+          const val = e.target.value;
+          state.searchQuery = val;
+          els.searchClearBtn.style.display = val ? "block" : "none";
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => applyFilters(), 180);
+        });
+
+        els.searchClearBtn.addEventListener("click", () => {
+          els.searchInput.value = "";
+          state.searchQuery = "";
+          els.searchClearBtn.style.display = "none";
+          applyFilters();
+        });
+
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "/" && document.activeElement !== els.searchInput) {
+            e.preventDefault();
+            els.searchInput.focus();
+          } else if (e.key === "Escape") {
+            closeDetailsModal();
+            els.guideModal.classList.remove("open");
+          }
+        });
+
+        els.idFilterGroup.addEventListener("click", (e) => {
+          const btn = e.target.closest(".pill-filter");
+          if (!btn) return;
+          els.idFilterGroup.querySelectorAll(".pill-filter").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.activeFilter = btn.getAttribute("data-filter");
+          applyFilters();
+        });
+
+        els.severitySelect.addEventListener("change", (e) => {
+          state.severityFilter = e.target.value;
+          applyFilters();
+        });
+
+        els.sortOrderBtn.addEventListener("click", () => {
+          state.sortOrder = state.sortOrder === "desc" ? "asc" : "desc";
+          els.sortOrderText.textContent = state.sortOrder === "desc" ? "Newest First" : "Oldest First";
+          applyFilters();
+        });
+
+        els.resetFiltersBtn.addEventListener("click", () => {
+          state.searchQuery = "";
+          els.searchInput.value = "";
+          els.searchClearBtn.style.display = "none";
+          state.activeFilter = "all";
+          els.idFilterGroup.querySelectorAll(".pill-filter").forEach(b => b.classList.toggle("active", b.getAttribute("data-filter") === "all"));
+          state.severityFilter = "all";
+          els.severitySelect.value = "all";
+          applyFilters();
+        });
+
+        els.prevPageBtn.addEventListener("click", () => {
+          if (state.currentPage > 1) {
+            state.currentPage--;
+            renderTable();
+          }
+        });
+
+        els.nextPageBtn.addEventListener("click", () => {
+          const maxP = Math.ceil(state.filteredEvents.length / state.pageSize);
+          if (state.currentPage < maxP) {
+            state.currentPage++;
+            renderTable();
+          }
+        });
+
+        els.pageSizeSelect.addEventListener("change", (e) => {
+          state.pageSize = Number(e.target.value);
+          state.currentPage = 1;
+          renderTable();
+        });
+
+        els.retryLiveBtn.addEventListener("click", () => {
+          state.source = "live";
+          fetchEvents();
+        });
+
+        els.forceDemoToggle.addEventListener("click", () => {
+          state.source = state.source === "demo" ? "auto" : "demo";
+          fetchEvents();
+        });
+
+        els.modalCloseBtn.addEventListener("click", closeDetailsModal);
+        els.detailsModal.addEventListener("click", (e) => {
+          if (e.target === els.detailsModal) closeDetailsModal();
+        });
+
+        els.demoGuideBtn.addEventListener("click", () => {
+          els.guideModal.classList.add("open");
+        });
+        els.guideCloseBtn.addEventListener("click", () => {
+          els.guideModal.classList.remove("open");
+        });
+        els.guideModal.addEventListener("click", (e) => {
+          if (e.target === els.guideModal) els.guideModal.classList.remove("open");
+        });
+      }
+
+      function resetTimer() {
+        if (state.timerId) clearInterval(state.timerId);
+        if (state.autoRefresh) {
+          state.timerId = setInterval(() => {
+            fetchEvents();
+          }, state.refreshInterval);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Initialization
+      // -----------------------------------------------------------------------
+      async function init() {
+        setupListeners();
+        await fetchDiagnostics();
+        await fetchEvents();
+        resetTimer();
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+
+    })();
+  </script>
+</body>
+</html>
